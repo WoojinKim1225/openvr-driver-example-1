@@ -1,9 +1,9 @@
 #pragma once
 #include <ControllerDriver.h>
 #include <openvr_driver.h>
+#include <memory>
 #include <windows.h>
 
-using namespace vr;
 
 /**
 This class instantiates all the device drivers you have, meaning if you've 
@@ -13,14 +13,14 @@ create instances of each of those and inform OpenVR about all of your devices.
 Take a look at the comment blocks for all the methods in IServerTrackedDeviceProvider
 too.
 **/
-class DeviceProvider : public IServerTrackedDeviceProvider
+class DeviceProvider : public vr::IServerTrackedDeviceProvider
 {
 public:
 
 	/**
 	Initiailze and add your drivers to OpenVR here.
 	**/
-	EVRInitError Init(IVRDriverContext* pDriverContext);
+	vr::EVRInitError Init(vr::IVRDriverContext* pDriverContext);
 
 	/**
 	Called right before your driver is unloaded.
@@ -53,5 +53,7 @@ public:
 	void LeaveStandby();
 
 private:
-	ControllerDriver* controllerDriver; //this provider only provides this one controller driver.
+	//ControllerDriver* controllerDriver; //this provider only provides this one controller driver.
+	std::unique_ptr<ControllerDriver> feetControllerDevice_l;
+	std::unique_ptr<ControllerDriver> feetControllerDevice_r;
 };

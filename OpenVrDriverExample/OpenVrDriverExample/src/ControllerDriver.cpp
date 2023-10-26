@@ -1,22 +1,54 @@
 #include <ControllerDriver.h>
+#include <driverlog.h>
+#include <vrmath.h>
 
-EVRInitError ControllerDriver::Activate(uint32_t unObjectId)
+static const char* controllerMainSettingsSection = "hellion_controller";
+
+static const char* controllerSettingsSection_r = "hellion_controller_l";
+static const char* controllerSettingsSection_l = "hellion-controller_r",
+static const char* controllerSettingsKeyModelNumber = "controller_model_number";
+static const char* controllerSettingsKeySerialNumber = "controller_serial_number";
+
+ControllerDriver::ControllerDriver(vr::ETrackedControllerRole role) {
+	isActive = false;
+	controllerRole = role;
+	char model_number[1024];
+	vr::VRSettings()->GetString(controllerMainSettingsSection, controllerSettingsKeyModelNumber, model_number, sizeof(model_number));
+	controllerModelNumber = model_number;
+
+	char serial_number[1024];
+	vr::VRSettings()->GetString((controllerRole == vr::TrackedControllerRole_LeftHand ? controllerSettingsSection_l : controllerSettingsSection_r), controllerSettingsKeySerialNumber, serial_number, sizeof(serial_number));
+	controllerModelNumber = serial_number;
+
+	DriverLog("My Controller Model Number : %s", controllerModelNumber.c_str());
+	DriverLog("My Controller Serial Number : %s", controllerSerialNumber.c_str());
+}
+
+vr::EVRInitError ControllerDriver::Activate(uint32_t unObjectId)
 {
+	isActive = true;
 	driverId = unObjectId; //unique ID for your driver
 
-	PropertyContainerHandle_t props = VRProperties()->TrackedDeviceToPropertyContainer(driverId); //this gets a container object where you store all the information about your driver
+	vr::PropertyContainerHandle_t container = vr::VRProperties()->TrackedDeviceToPropertyContainer(driverId); //this gets a container object where you store all the information about your driver
 
-	VRProperties()->SetStringProperty(props, Prop_InputProfilePath_String, "{example}/input/controller_profile.json"); //tell OpenVR where to get your driver's Input Profile
-	VRProperties()->SetInt32Property(props, Prop_ControllerRoleHint_Int32, ETrackedControllerRole::TrackedControllerRole_Treadmill); //tells OpenVR what kind of device this is
-	VRDriverInput()->CreateScalarComponent(props, "/input/joystick/y", &joystickYHandle, EVRScalarType::VRScalarType_Absolute,
-		EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //sets up handler you'll use to send joystick commands to OpenVR with, in the Y direction (forward/backward)
-	VRDriverInput()->CreateScalarComponent(props, "/input/trackpad/y", &trackpadYHandle, EVRScalarType::VRScalarType_Absolute,
-		EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //sets up handler you'll use to send trackpad commands to OpenVR with, in the Y direction
-	VRDriverInput()->CreateScalarComponent(props, "/input/joystick/x", &joystickXHandle, EVRScalarType::VRScalarType_Absolute,
-		EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //Why VRScalarType_Absolute? Take a look at the comments on EVRScalarType.
-	VRDriverInput()->CreateScalarComponent(props, "/input/trackpad/x", &trackpadXHandle, EVRScalarType::VRScalarType_Absolute,
-		EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //Why VRScalarUnits_NormalizedTwoSided? Take a look at the comments on EVRScalarUnits.
+	vr::VRProperties()->SetStringProperty(container, vr::Prop_ModelNumber_String, controllerModelNumber.c_str());
+
+	vr::VRProperties()->SetStringProperty(container, vr::Prop_InputProfilePath_String, "{hellion}/input/controller_profile.json"); //tell OpenVR where to get your driver's Input Profile
+	vr::VRProperties()->SetInt32Property(container, vr::Prop_ControllerRoleHint_Int32, controllerRole); //tells OpenVR what kind of device this is
+
+
+	//vr::VRDriverInput()->CreateScalarComponent(container, "/input/joystick/y", &joystickYHandle, EVRScalarType::VRScalarType_Absolute, EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //sets up handler you'll use to send joystick commands to OpenVR with, in the Y direction (forward/backward)
+	//vr::VRDriverInput()->CreateScalarComponent(props, "/input/trackpad/y", &trackpadYHandle, EVRScalarType::VRScalarType_Absolute, EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //sets up handler you'll use to send trackpad commands to OpenVR with, in the Y direction
+	//vr::VRDriverInput()->CreateScalarComponent(props, "/input/joystick/x", &joystickXHandle, EVRScalarType::VRScalarType_Absolute, EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //Why VRScalarType_Absolute? Take a look at the comments on EVRScalarType.
+	//vr::VRDriverInput()->CreateScalarComponent(props, "/input/trackpad/x", &trackpadXHandle, EVRScalarType::VRScalarType_Absolute, EVRScalarUnits::VRScalarUnits_NormalizedTwoSided); //Why VRScalarUnits_NormalizedTwoSided? Take a look at the comments on EVRScalarUnits.
 	
+	vr::VRDriverInput()->CreateBooleanComponent(container, "/input/a/click", &inputHandles[Component_a_click]);
+	vr::VRDriverInput()->CreateScalarComponent(container, "/input/trigger/value", &inputHandles[Component_trigger_value], vr::VRScalarType_Absolute, vr::VRScalarUnits_NormalizedOneSided);
+	vr::VRDriverInput()->CreateScalarComponent(container, "/input/joystick/y", &inputHandles[Component_joystick_y_value], vr::VRScalarType_Absolute, vr::VRScalarUnits_NormalizedTwoSided);
+	vr::VRDriverInput()->CreateScalarComponent(container, "/input/joystick/x", &inputHandles[Component_joystick_x_value], vr::VRScalarType_Absolute, vr::VRScalarUnits_NormalizedTwoSided);
+
+	poseUpdateThread = std::thread(&ControllerDriver::PoseUpdateThread, this);
+
 	//The following properites are ones I tried out because I saw them in other samples, but I found they were not needed to get the sample working.
 	//There are many samples, take a look at the openvr_header.h file. You can try them out.
 
@@ -31,24 +63,50 @@ EVRInitError ControllerDriver::Activate(uint32_t unObjectId)
 	//	ButtonMaskFromId(k_EButton_IndexController_JoyStick);
 	//VRProperties()->SetUint64Property(props, Prop_SupportedButtons_Uint64, availableButtons);
 
-	return VRInitError_None;
+	return vr::VRInitError_None;
 }
 
-DriverPose_t ControllerDriver::GetPose()
+void* ControllerDriver::GetComponent(const char* pchComponentNameAndVersion) {
+	return nullptr;
+}
+
+void ControllerDriver::DebugRequest(const char* pchRequest, char* pchResponseBuffer, uint32_t unResponseBufferSize) {
+	if (unResponseBufferSize >= 1) {
+		pchResponseBuffer[0] = 0;
+	}
+}
+
+vr::DriverPose_t ControllerDriver::GetPose()
 {
-	DriverPose_t pose = { 0 }; //This example doesn't use Pose, so this method is just returning a default Pose.
-	pose.poseIsValid = false;
-	pose.result = TrackingResult_Calibrating_OutOfRange;
+	//Initialize the struct that we'll be submitting to the runtime to tell it we've updated our pose.
+	vr::DriverPose_t pose = { 0 };
+
+	pose.qWorldFromDriverRotation.w = 1.f;
+	pose.qWorldFromDriverRotation.w = 1.f;
+
+	vr::TrackedDevicePose_t hmdPose{};
+
+	pose.poseIsValid = true;
 	pose.deviceIsConnected = true;
 
-	HmdQuaternion_t quat;
-	quat.w = 1;
-	quat.x = 0;
-	quat.y = 0;
-	quat.z = 0;
+	vr::VRServerDriverHost()->GetRawTrackedDevicePoses(0.f, &hmdPose, 1);
 
-	pose.qWorldFromDriverRotation = quat;
-	pose.qDriverFromHeadRotation = quat;
+	const vr::HmdVector3_t hmd_positionOS = HmdVector3_From34Matrix(hmdPose.mDeviceToAbsoluteTracking);
+	const vr::HmdQuaternion_t hmd_rotationOS = HmdQuaternion_FromMatrix(hmdPose.mDeviceToAbsoluteTracking);
+
+	const vr::HmdVector3_t positionOffset;
+	const vr::HmdQuaternion_t rotationOffset;
+
+	const vr::HmdVector3_t hmd_positionWS = hmd_positionOS + (positionOffset * hmd_rotationOS);
+	const vr::HmdQuaternion_t hmd_rotationWS = hmd_rotationOS * rotationOffset;
+	
+	for (int i = 0; i < 3; i++) {
+		pose.vecPosition[i] = hmd_positionWS.v[i];
+	}
+	pose.qRotation = hmd_rotationWS;
+	
+
+	pose.result = vr::TrackingResult_Running_OK;
 
 	return pose;
 }
@@ -56,15 +114,15 @@ DriverPose_t ControllerDriver::GetPose()
 void ControllerDriver::RunFrame()
 {
 	//Since we used VRScalarUnits_NormalizedTwoSided as the unit, the range is -1 to 1.
-	VRDriverInput()->UpdateScalarComponent(joystickYHandle, 0.95f, 0); //move forward
-	VRDriverInput()->UpdateScalarComponent(trackpadYHandle, 0.95f, 0); //move foward
-	VRDriverInput()->UpdateScalarComponent(joystickXHandle, 0.0f, 0); //change the value to move sideways
-	VRDriverInput()->UpdateScalarComponent(trackpadXHandle, 0.0f, 0); //change the value to move sideways
+	// VRDriverInput()->UpdateScalarComponent(joystickYHandle, 0.95f, 0); //move forward
+	// VRDriverInput()->UpdateScalarComponent(trackpadYHandle, 0.95f, 0); //move foward
+	// VRDriverInput()->UpdateScalarComponent(joystickXHandle, 0.0f, 0); //change the value to move sideways
+	// VRDriverInput()->UpdateScalarComponent(trackpadXHandle, 0.0f, 0); //change the value to move sideways
 }
 
 void ControllerDriver::Deactivate()
 {
-	driverId = k_unTrackedDeviceIndexInvalid;
+	driverId = vr::k_unTrackedDeviceIndexInvalid;
 }
 
 void* ControllerDriver::GetComponent(const char* pchComponentNameAndVersion)
@@ -73,7 +131,7 @@ void* ControllerDriver::GetComponent(const char* pchComponentNameAndVersion)
 	//Check out the IVRDriverInput_Version declaration in openvr_driver.h. You can search that file for other _Version declarations 
 	//to see other components that are available. You could also put a log in this class and output the value passed into this 
 	//method to see what OpenVR is looking for.
-	if (strcmp(IVRDriverInput_Version, pchComponentNameAndVersion) == 0)
+	if (strcmp(vr::IVRDriverInput_Version, pchComponentNameAndVersion) == 0)
 	{
 		return this;
 	}

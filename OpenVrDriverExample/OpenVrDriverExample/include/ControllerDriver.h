@@ -1,8 +1,17 @@
 #pragma once
 #include <openvr_driver.h>
 #include <windows.h>
+#include <atomic>
+#include <array>
+#include <thread>
 
-using namespace vr;
+enum Component {
+	Component_a_click,
+	Component_trigger_value,
+	Component_joystick_x_value,
+	Component_joystick_y_value,
+	Component_MAX
+};
 
 /**
 This class controls the behavior of the controller. This is where you 
@@ -17,16 +26,16 @@ This example driver will simulate a controller that has a joystick and trackpad 
 It is hardcoded to just return a value for the joystick and trackpad. It will cause 
 the game character to move forward constantly.
 **/
-class ControllerDriver : public ITrackedDeviceServerDriver
+class ControllerDriver : public vr::ITrackedDeviceServerDriver
 {
 public:
-
+	ControllerDriver(vr::ETrackedControllerRole role);
 	/**
 	Initialize your controller here. Give OpenVR information 
 	about your controller and set up handles to inform OpenVR when 
 	the controller state changes.
 	**/
-	EVRInitError Activate(uint32_t unObjectId);
+	vr::EVRInitError Activate(uint32_t unObjectId);
 
 	/**
 	Un-initialize your controller here.
@@ -56,7 +65,7 @@ public:
 	Returns the Pose for your device. Pose is an object that contains the position, rotation, velocity, 
 	and angular velocity of your device.
 	**/
-	DriverPose_t GetPose();
+	vr::DriverPose_t GetPose();
 
 	/**
 	You can retrieve the state of your device here and update OpenVR if anything has changed. This 
@@ -64,12 +73,20 @@ public:
 	**/
 	void RunFrame();
 
+	void PoseUpdateThread();
+
 private:
 
 	uint32_t driverId;
-	VRInputComponentHandle_t joystickYHandle;
-	VRInputComponentHandle_t trackpadYHandle;
-	VRInputComponentHandle_t joystickXHandle;
-	VRInputComponentHandle_t trackpadXHandle;
+	// VRInputComponentHandle_t joystickYHandle;
+	// VRInputComponentHandle_t trackpadYHandle;
+	// VRInputComponentHandle_t joystickXHandle;
+	// VRInputComponentHandle_t trackpadXHandle;
 
+	vr::ETrackedControllerRole controllerRole;
+	std::string controllerModelNumber;
+	std::string controllerSerialNumber;
+	std::array < vr::VRInputComponentHandle_t, Component_MAX > inputHandles;
+	std::atomic< bool > isActive;
+	std::thread poseUpdateThread;
 };

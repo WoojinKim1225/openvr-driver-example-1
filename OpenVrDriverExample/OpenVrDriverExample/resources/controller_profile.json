@@ -1,26 +1,32 @@
 {
   "jsonid": "input_profile",
-  "controller_type": "example_controller",
-  "legacy_binding" : "{example}/input/legacy_bindings_example.json",
-  "device_class" : "TrackedDeviceClass_Controller",
-  "input_bindingui_mode": "single_device",
+  "controller_type": "mycontroller",
+  "input_bindingui_mode": "controller_handed",
+  "input_bindingui_left": {
+    "image": "{hellion}/icons/sample_controller.svg"
+  },
   "input_bindingui_right": {
-		"image": "{example}/icons/game_controller.svg"
+    "image": "{hellion}/icons/sample_controller.svg"
   },
   "should_show_binding_errors": true,
   "input_source": {
+    "/input/a": {
+      "binding_image_point": [ 80, 60 ],
+      "type": "button",
+      "touch": true,
+      "order": 1
+    },
+    "/input/trigger": {
+      "binding_image_point": [ 250, 60 ],
+      "type": "trigger",
+      "order": 2
+    },
     "/input/joystick": {
       "type": "joystick",
       "click": false,
       "touch": false,
-      "binding_image_point": [0,0]
+      "order": 4
     },
-	"/input/trackpad" : { 
-        "type" : "trackpad",
-        "binding_image_point" : [ 0, 0 ],
-        "force" : false,
-        "click" : false,
-        "touch" : false
-    }
+    "default_bindings": []
   }
 }

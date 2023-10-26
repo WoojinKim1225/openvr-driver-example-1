@@ -30,6 +30,12 @@
     <ClInclude Include="include\DeviceProvider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\driverlog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vrmath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ControllerDriver.cpp">
@@ -39,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\DeviceFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\driverlog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
