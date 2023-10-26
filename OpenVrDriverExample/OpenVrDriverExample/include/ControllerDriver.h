@@ -78,10 +78,10 @@ public:
 private:
 
 	uint32_t driverId;
-	// VRInputComponentHandle_t joystickYHandle;
-	// VRInputComponentHandle_t trackpadYHandle;
-	// VRInputComponentHandle_t joystickXHandle;
-	// VRInputComponentHandle_t trackpadXHandle;
+	
+	float triggerValue;
+	bool aValue;
+	float joystickValue[2];
 
 	vr::ETrackedControllerRole controllerRole;
 	std::string controllerModelNumber;

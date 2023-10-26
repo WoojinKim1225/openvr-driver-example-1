@@ -66,9 +66,6 @@ vr::EVRInitError ControllerDriver::Activate(uint32_t unObjectId)
 	return vr::VRInitError_None;
 }
 
-void* ControllerDriver::GetComponent(const char* pchComponentNameAndVersion) {
-	return nullptr;
-}
 
 void ControllerDriver::DebugRequest(const char* pchRequest, char* pchResponseBuffer, uint32_t unResponseBufferSize) {
 	if (unResponseBufferSize >= 1) {
@@ -111,17 +108,26 @@ vr::DriverPose_t ControllerDriver::GetPose()
 	return pose;
 }
 
-void ControllerDriver::RunFrame()
-{
+void ControllerDriver::PoseUpdateThread() {
+	while (isActive) {
+		vr::VRServerDriverHost()->TrackedDevicePoseUpdated(driverId, GetPose(), sizeof(vr::DriverPose_t));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+}
+
+void ControllerDriver::RunFrame() {
 	//Since we used VRScalarUnits_NormalizedTwoSided as the unit, the range is -1 to 1.
-	// VRDriverInput()->UpdateScalarComponent(joystickYHandle, 0.95f, 0); //move forward
-	// VRDriverInput()->UpdateScalarComponent(trackpadYHandle, 0.95f, 0); //move foward
-	// VRDriverInput()->UpdateScalarComponent(joystickXHandle, 0.0f, 0); //change the value to move sideways
-	// VRDriverInput()->UpdateScalarComponent(trackpadXHandle, 0.0f, 0); //change the value to move sideways
+	vr::VRDriverInput()->UpdateScalarComponent(inputHandles[Component_trigger_value], triggerValue, 0.f);
+	vr::VRDriverInput()->UpdateBooleanComponent(inputHandles[Component_a_click], aValue, 0.f);
+	vr::VRDriverInput()->UpdateScalarComponent(inputHandles[Component_joystick_x_value], joystickValue[0], 0.f);
+	vr::VRDriverInput()->UpdateScalarComponent(inputHandles[Component_joystick_y_value], joystickValue[1], 0.f);
 }
 
 void ControllerDriver::Deactivate()
 {
+	if (isActive.exchange(false)) {
+		poseUpdateThread.join();
+	}
 	driverId = vr::k_unTrackedDeviceIndexInvalid;
 }
 
