@@ -88,7 +88,9 @@ vr::DriverPose_t ControllerDriver::GetPose()
 
 	vr::VRServerDriverHost()->GetRawTrackedDevicePoses(0.f, &hmdPose, 1);
 
+	// have to fix tis part using vector3.
 	const vr::HmdVector3_t hmd_positionOS = HmdVector3_From34Matrix(hmdPose.mDeviceToAbsoluteTracking);
+	// have to fix this part using quaternions.
 	const vr::HmdQuaternion_t hmd_rotationOS = HmdQuaternion_FromMatrix(hmdPose.mDeviceToAbsoluteTracking);
 
 	const vr::HmdVector3_t positionOffset;
