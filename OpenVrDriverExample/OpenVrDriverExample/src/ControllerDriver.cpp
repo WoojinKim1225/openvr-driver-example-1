@@ -5,7 +5,7 @@
 #include <Windows.h>
 #include <SerialPort.h>
 #include <iostream>
-#include <wbemidl.h>
+#include <WbemIdl.h>
 
 
 static const char* controllerMainSettingsSection = "hellion_controller";
@@ -164,17 +164,16 @@ void ControllerDriver::DebugRequest(const char* pchRequest, char* pchResponseBuf
 }
 
 SerialPort* pi;
-char receiveData[255];
-char savedData[255];
+char receivedData[255];
+char savedData[511];
 
 void ReadSerial() {
-	int readResult = pi->readSerialPort(receiveData, 255);
-	vr::VRDriverLog()->Log(receiveData);
-	if (charlen(receiveData) != 0) {
-		for (int i = 0; i < charlen(receiveData); i++) {
-			//...
-		}
-	}
+	int readResult = pi->readSerialPort(receivedData, 255);
+	vr::VRDriverLog()->Log(receivedData);
+
+	strcat_s(savedData, sizeof(savedData), receivedData);
+
+
 
 
 }
@@ -192,11 +191,8 @@ int charlen(char* p) {
 	}
 }
 
-void autoConnectHellion() {//...
-	CoInitialize(NULL);
-	IEnumWbemClassObject* pEnumerator = NULL;
-	HRESULT hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLoc);
-	IWbemServices* pSvc = NULL;
+char* safeStrcat(char* dest, char* origin) {
+	int destSize = sizeof(dest) / sizeof(*dest);
+	int originSize = sizeof(origin) / sizeof(*origin);
 
-	hres = pLoc->ConnectServer(_bstr_t())
 }
