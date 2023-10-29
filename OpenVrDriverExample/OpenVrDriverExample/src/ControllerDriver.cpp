@@ -1,6 +1,12 @@
 #include <ControllerDriver.h>
+#include <string.h>
 #include <driverlog.h>
 #include <vrmath.h>
+#include <Windows.h>
+#include <SerialPort.h>
+#include <iostream>
+#include <wbemidl.h>
+
 
 static const char* controllerMainSettingsSection = "hellion_controller";
 
@@ -118,6 +124,7 @@ void ControllerDriver::PoseUpdateThread() {
 }
 
 void ControllerDriver::RunFrame() {
+	ReadSerial();
 	//Since we used VRScalarUnits_NormalizedTwoSided as the unit, the range is -1 to 1.
 	vr::VRDriverInput()->UpdateScalarComponent(inputHandles[Component_trigger_value], triggerValue, 0.f);
 	vr::VRDriverInput()->UpdateBooleanComponent(inputHandles[Component_a_click], aValue, 0.f);
@@ -154,4 +161,42 @@ void ControllerDriver::DebugRequest(const char* pchRequest, char* pchResponseBuf
 	{
 		pchResponseBuffer[0] = 0;
 	}
+}
+
+SerialPort* pi;
+char receiveData[255];
+char savedData[255];
+
+void ReadSerial() {
+	int readResult = pi->readSerialPort(receiveData, 255);
+	vr::VRDriverLog()->Log(receiveData);
+	if (charlen(receiveData) != 0) {
+		for (int i = 0; i < charlen(receiveData); i++) {
+			//...
+		}
+	}
+
+
+}
+
+int charlen(char* p) {
+	int count = 0;
+	if (p != nullptr) {
+		while (*p != '\0')
+		{
+			count++;
+			p++;
+		}
+
+		return count;
+	}
+}
+
+void autoConnectHellion() {//...
+	CoInitialize(NULL);
+	IEnumWbemClassObject* pEnumerator = NULL;
+	HRESULT hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLoc);
+	IWbemServices* pSvc = NULL;
+
+	hres = pLoc->ConnectServer(_bstr_t())
 }

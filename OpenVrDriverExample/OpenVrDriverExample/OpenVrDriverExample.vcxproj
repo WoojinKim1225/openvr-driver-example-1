@@ -25,6 +25,7 @@
     <ClInclude Include="include\openvr.h" />
     <ClInclude Include="include\openvr_capi.h" />
     <ClInclude Include="include\openvr_driver.h" />
+    <ClInclude Include="include\SerialPort.h" />
     <ClInclude Include="include\vrmath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +33,7 @@
     <ClCompile Include="src\DeviceFactory.cpp" />
     <ClCompile Include="src\DeviceProvider.cpp" />
     <ClCompile Include="src\driverlog.cpp" />
+    <ClCompile Include="src\SerialPort.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="include\openvr_api.cs" />
