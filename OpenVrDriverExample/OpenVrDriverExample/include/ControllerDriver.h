@@ -77,11 +77,15 @@ public:
 
 private:
 
+	
+
 	uint32_t driverId;
 	
 	float triggerValue;
 	bool aValue;
 	float joystickValue[2];
+	vr::HmdVector3_t pos;
+	vr::HmdQuaternion_t rot;
 
 	vr::ETrackedControllerRole controllerRole;
 	std::string controllerModelNumber;

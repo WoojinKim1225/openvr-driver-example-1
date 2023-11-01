@@ -95,9 +95,11 @@ vr::DriverPose_t ControllerDriver::GetPose()
 	vr::VRServerDriverHost()->GetRawTrackedDevicePoses(0.f, &hmdPose, 1);
 
 	// have to fix tis part using vector3.
-	const vr::HmdVector3_t hmd_positionOS = HmdVector3_From34Matrix(hmdPose.mDeviceToAbsoluteTracking);
+	// const vr::HmdVector3_t hmd_positionOS = HmdVector3_From34Matrix(hmdPose.mDeviceToAbsoluteTracking);
+	const vr::HmdVector3_t hmd_positionOS = pos;
 	// have to fix this part using quaternions.
-	const vr::HmdQuaternion_t hmd_rotationOS = HmdQuaternion_FromMatrix(hmdPose.mDeviceToAbsoluteTracking);
+	// const vr::HmdQuaternion_t hmd_rotationOS = HmdQuaternion_FromMatrix(hmdPose.mDeviceToAbsoluteTracking);
+	const vr::HmdQuaternion_t hmd_rotationOS = rot;
 
 	const vr::HmdVector3_t positionOffset;
 	const vr::HmdQuaternion_t rotationOffset;
@@ -124,7 +126,7 @@ void ControllerDriver::PoseUpdateThread() {
 }
 
 void ControllerDriver::RunFrame() {
-	ReadSerial();
+	ReadSerial(controllerRole, triggerValue, aValue, joystickValue, pos, rot);
 	//Since we used VRScalarUnits_NormalizedTwoSided as the unit, the range is -1 to 1.
 	vr::VRDriverInput()->UpdateScalarComponent(inputHandles[Component_trigger_value], triggerValue, 0.f);
 	vr::VRDriverInput()->UpdateBooleanComponent(inputHandles[Component_a_click], aValue, 0.f);
@@ -167,13 +169,42 @@ SerialPort* pi;
 char receivedData[255];
 char savedData[511];
 
-void ReadSerial() {
+void ReadSerial(vr::ETrackedControllerRole role, float tVal, float aVal, float* jVal, vr::HmdVector3_t pos, vr::HmdQuaternion_t rot) {
 	int readResult = pi->readSerialPort(receivedData, 255);
 	vr::VRDriverLog()->Log(receivedData);
 
-	strcat_s(savedData, sizeof(savedData), receivedData);
-
-
+	//strcat_s(savedData, sizeof(savedData), receivedData);
+	memcpy(savedData, receivedData, strlen(receivedData));
+	
+	// pose use 72진법, rot use 96진법
+	if ((savedData[1] == 'L' || savedData[1] == 'l') && role == vr::TrackedControllerRole_LeftHand) {
+		// set this to left
+		tVal = (savedData[1] == 'L');
+		aVal = (savedData[2] == '1');
+		jVal[0] = (static_cast<int>(savedData[3]) - 79.0) / 48.0;
+		jVal[1] = (static_cast<int>(savedData[4]) - 79.0) / 48.0;
+		pos.v[0] = 
+		pos.v[1] =
+		pos.v[2] =
+		rot.w = 
+		rot.x = 
+		rot.y = 
+		rot.z = 
+	}
+	else if ((savedData[1] == 'R' || savedData[1] == 'r') && role == vr::TrackedControllerRole_RightHand) {
+		// set this to right
+		tVal = (savedData[1] == 'R');
+		aVal = (savedData[2] == '1');
+		jVal[0] = (static_cast<int>(savedData[3]) - 79.0) / 48.0;
+		jVal[1] = (static_cast<int>(savedData[4]) - 79.0) / 48.0;
+		pos.v[0] = 
+		pos.v[1] =
+		pos.v[2] =
+		rot.w = 
+		rot.x = 
+		rot.y = 
+		rot.z = 
+	}
 
 
 }
